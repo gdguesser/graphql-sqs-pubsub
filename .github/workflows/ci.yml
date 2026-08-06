@@ -53,7 +53,7 @@ jobs:
     runs-on: ubuntu-latest
     services:
       localstack:
-        image: localstack/localstack@sha256:f52869de342d4758f6899d88a561b586765ac6789e7e1484e8806e0fc0eeed88
+        image: localstack/localstack@sha256:a65ee2a9d45a7a34a1f1faae515d2e577ce11210312c077700ccc82daefec238
         env:
           SERVICES: sqs
         ports:
