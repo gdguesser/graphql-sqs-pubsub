@@ -1,0 +1,50 @@
+name: Publish package
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  publish:
+    if: github.repository == 'gdguesser/graphql-sqs-pubsub'
+    runs-on: ubuntu-latest
+    environment: npm
+    steps:
+      - name: Check out source
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+      - name: Set up Node.js
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: 24
+          registry-url: https://registry.npmjs.org
+          package-manager-cache: false
+      - name: Install locked dependencies
+        run: npm ci
+      - name: Verify release tag
+        run: >-
+          node -e "const p=require('./package.json');
+          if(process.env.GITHUB_REF_NAME!=='v'+p.version) throw new
+          Error('Release tag must equal v'+p.version)"
+      - name: Run release quality gate
+        run: npm run check
+      - name: Check registry state
+        id: registry
+        shell: bash
+        run: |
+          package_name="$(node -p "require('./package.json').name")"
+          package_version="$(node -p "require('./package.json').version")"
+          if npm view "${package_name}@${package_version}" version >/dev/null 2>&1; then
+            echo "already-published=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "already-published=false" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Publish with provenance
+        if: steps.registry.outputs.already-published != 'true'
+        run: npm publish --access public --provenance
+      - name: Confirm existing registry release
+        if: steps.registry.outputs.already-published == 'true'
+        run: echo "The release version is already available on npm."
